@@ -34,27 +34,55 @@ async function getCommits() {
 
     console.log(`Commits after filtering [ignore]: ${filteredCommits.length}`);
 
-    return filteredCommits.map((commit) => {
-      return {
-        hash: commit.hash.substring(0, 7),
-        author: commit.author_name,
-        email: commit.author_email,
-        date: new Date(commit.date).toLocaleString('en-US', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false,
-        }),
-        title: commit.message.split('\n')[0],
-        content: commit.body || commit.message.split('\n')[0],
-      };
-    });
+    // Get images for each commit
+    const commitsWithImages = await Promise.all(
+      filteredCommits.map(async (commit) => {
+        const images = await getCommitImages(git, commit.hash);
+        return {
+          hash: commit.hash.substring(0, 7),
+          author: commit.author_name,
+          email: commit.author_email,
+          date: new Date(commit.date).toLocaleString('en-US', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false,
+          }),
+          title: commit.message.split('\n')[0],
+          content: commit.body || commit.message.split('\n')[0],
+          images: images,
+        };
+      })
+    );
+
+    return commitsWithImages;
   } catch (error) {
     console.error('Error fetching commits:', error.message);
     process.exit(1);
+  }
+}
+
+// Get image files from a commit
+async function getCommitImages(git, commitHash) {
+  try {
+    const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp'];
+    const diffSummary = await git.diffSummary([`${commitHash}^`, commitHash]);
+
+    const images = diffSummary.files
+      .filter((file) => {
+        const ext = path.extname(file.file).toLowerCase();
+        return imageExtensions.includes(ext);
+      })
+      .map((file) => file.file);
+
+    return images;
+  } catch (error) {
+    // Handle case where commit has no parent (initial commit)
+    console.log(`Could not get diff for ${commitHash.substring(0, 7)}: ${error.message}`);
+    return [];
   }
 }
 
@@ -75,9 +103,19 @@ function generateHTML(commits) {
       <div class="content">
         ${escapeHTML(commit.content)
           .split('\n')
+          .filter((line) => line.trim() !== '')
           .map((line) => `<p>${line}</p>`)
           .join('')}
       </div>
+      ${commit.images && commit.images.length > 0 ? `
+      <div class="image-grid">
+        ${commit.images.map((image) => `
+        <div class="image-item">
+          <img src="${escapeHTML(image)}" alt="Image from commit" loading="lazy" />
+        </div>
+        `).join('')}
+      </div>
+      ` : ''}
     </article>
   `
     )
@@ -185,6 +223,33 @@ function generateHTML(commits) {
       display: none;
     }
 
+    .image-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .image-item {
+      position: relative;
+      aspect-ratio: 1;
+      overflow: hidden;
+      background: #f8f9fa;
+      border-radius: 4px;
+    }
+
+    .image-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.3s ease;
+    }
+
+    .image-item:hover img {
+      transform: scale(1.05);
+    }
+
     footer {
       margin-top: 60px;
       padding-top: 20px;
@@ -209,6 +274,11 @@ function generateHTML(commits) {
 
       .post h2 {
         font-size: 1.5rem;
+      }
+
+      .image-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 8px;
       }
     }
   </style>
