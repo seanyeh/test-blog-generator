@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const { execSync } = require('child_process');
+const simpleGit = require('simple-git');
 const fs = require('fs');
 const path = require('path');
 
@@ -9,27 +9,32 @@ const MAX_POSTS = parseInt(process.env.MAX_POSTS || '50', 10);
 const OUTPUT_DIR = 'dist';
 
 // Get commits
-function getCommits() {
+async function getCommits() {
   try {
-    const gitLog = execSync(
-      `git log ${BRANCH} --pretty=format:"%H|%an|%ae|%ad|%s|%b" --date=format:"%Y-%m-%d %H:%M:%S" -n ${MAX_POSTS}`,
-      { encoding: 'utf-8' }
-    );
+    const git = simpleGit();
+    const log = await git.log({
+      maxCount: MAX_POSTS,
+      [BRANCH]: null,
+    });
 
-    return gitLog
-      .trim()
-      .split('\n')
-      .map((line) => {
-        const [hash, author, email, date, subject, body] = line.split('|');
-        return {
-          hash: hash.substring(0, 7),
-          author,
-          email,
-          date,
-          title: subject,
-          content: body || subject,
-        };
-      });
+    return log.all.map((commit) => {
+      return {
+        hash: commit.hash.substring(0, 7),
+        author: commit.author_name,
+        email: commit.author_email,
+        date: new Date(commit.date).toLocaleString('en-US', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        }),
+        title: commit.message.split('\n')[0],
+        content: commit.body || commit.message.split('\n')[0],
+      };
+    });
   } catch (error) {
     console.error('Error fetching commits:', error.message);
     process.exit(1);
@@ -221,10 +226,10 @@ function escapeHTML(str) {
 }
 
 // Main
-function main() {
+async function main() {
   console.log('Generating blog from commits...');
 
-  const commits = getCommits();
+  const commits = await getCommits();
   console.log(`Found ${commits.length} commits`);
 
   if (!fs.existsSync(OUTPUT_DIR)) {
