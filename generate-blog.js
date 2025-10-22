@@ -312,6 +312,36 @@ function escapeHTML(str) {
     .replace(/'/g, '&#039;');
 }
 
+// Copy images to output directory
+function copyImagesToOutput(commits) {
+  let totalImagesCopied = 0;
+
+  commits.forEach((commit) => {
+    if (commit.images && commit.images.length > 0) {
+      commit.images.forEach((imagePath) => {
+        const sourcePath = path.resolve(imagePath);
+        const destPath = path.join(OUTPUT_DIR, imagePath);
+
+        // Create directory structure if needed
+        const destDir = path.dirname(destPath);
+        if (!fs.existsSync(destDir)) {
+          fs.mkdirSync(destDir, { recursive: true });
+        }
+
+        // Copy image file if it exists
+        if (fs.existsSync(sourcePath)) {
+          fs.copyFileSync(sourcePath, destPath);
+          totalImagesCopied++;
+        } else {
+          console.log(`Warning: Image not found: ${imagePath}`);
+        }
+      });
+    }
+  });
+
+  return totalImagesCopied;
+}
+
 // Main
 async function main() {
   console.log('Generating blog from commits...');
@@ -321,6 +351,12 @@ async function main() {
 
   if (!fs.existsSync(OUTPUT_DIR)) {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+  }
+
+  // Copy images to output directory
+  const imagesCopied = copyImagesToOutput(commits);
+  if (imagesCopied > 0) {
+    console.log(`✓ Copied ${imagesCopied} image${imagesCopied !== 1 ? 's' : ''} to ${OUTPUT_DIR}`);
   }
 
   const html = generateHTML(commits);
