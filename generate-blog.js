@@ -211,6 +211,7 @@ function generateHTML(commits) {
 }
 
 function escapeHTML(str) {
+  if (!str) return '';
   return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
