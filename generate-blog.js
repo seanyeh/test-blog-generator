@@ -17,6 +17,15 @@ async function getCommits() {
       [BRANCH]: null,
     });
 
+    console.log(`Raw commits found: ${log.all.length}`);
+    log.all.forEach((commit, index) => {
+      console.log(`\nCommit ${index + 1}:`);
+      console.log(`  Hash: ${commit.hash.substring(0, 7)}`);
+      console.log(`  Author: ${commit.author_name}`);
+      console.log(`  Date: ${commit.date}`);
+      console.log(`  Message: ${commit.message.substring(0, 60)}${commit.message.length > 60 ? '...' : ''}`);
+    });
+
     return log.all.map((commit) => {
       return {
         hash: commit.hash.substring(0, 7),
