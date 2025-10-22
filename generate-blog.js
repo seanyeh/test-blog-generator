@@ -101,11 +101,7 @@ function generateHTML(commits) {
         </div>
       </header>
       <div class="content">
-        ${escapeHTML(commit.content)
-          .split('\n')
-          .filter((line) => line.trim() !== '')
-          .map((line) => `<p>${line}</p>`)
-          .join('')}
+        ${processContent(commit.content)}
       </div>
       ${commit.images && commit.images.length > 0 ? `
       <div class="image-grid">
@@ -310,6 +306,23 @@ function escapeHTML(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+// Process content text: single newlines are ignored, double+ newlines become paragraph breaks
+function processContent(content) {
+  if (!content) return '';
+
+  // Split by double or more newlines to get paragraphs
+  const paragraphs = content.split(/\n\n+/);
+
+  return paragraphs
+    .map((para) => {
+      // Within each paragraph, replace single newlines with spaces
+      const text = para.replace(/\n/g, ' ').trim();
+      return text ? `<p>${escapeHTML(text)}</p>` : '';
+    })
+    .filter((p) => p !== '')
+    .join('');
 }
 
 // Copy images to output directory
