@@ -26,7 +26,15 @@ async function getCommits() {
       console.log(`  Message: ${commit.message.substring(0, 60)}${commit.message.length > 60 ? '...' : ''}`);
     });
 
-    return log.all.map((commit) => {
+    // Filter out commits that start with [ignore]
+    const filteredCommits = log.all.filter((commit) => {
+      const title = commit.message.split('\n')[0];
+      return !title.toLowerCase().startsWith('[ignore]');
+    });
+
+    console.log(`Commits after filtering [ignore]: ${filteredCommits.length}`);
+
+    return filteredCommits.map((commit) => {
       return {
         hash: commit.hash.substring(0, 7),
         author: commit.author_name,
