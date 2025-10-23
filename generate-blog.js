@@ -107,7 +107,9 @@ function generateHTML(commits) {
       <div class="image-grid">
         ${commit.images.map((image) => `
         <div class="image-item">
-          <img src="${escapeHTML(image)}" alt="Image from commit" loading="lazy" />
+          <a href="${escapeHTML(image)}" target="_blank">
+            <img src="${escapeHTML(image)}" alt="Image from commit" loading="lazy" />
+          </a>
         </div>
         `).join('')}
       </div>
@@ -232,6 +234,13 @@ function generateHTML(commits) {
       overflow: hidden;
       background: #f8f9fa;
       border-radius: 4px;
+    }
+
+    .image-item a {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
     }
 
     .image-item img {
